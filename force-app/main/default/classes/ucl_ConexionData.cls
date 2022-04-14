@@ -77,7 +77,10 @@ public with sharing class ucl_ConexionData {
                     newClient.Address__c = adress;
                     newClient.Client_Number__c = clientNumber;
                     newClient.Legal_Advisor__c = legalAdvisorId;
-                    newClientsList.add(newClient);
+                    if(newLegalAdvisorList[i].legalAdvisor.Account_Status__c == 'Enabled'){
+                        newClientsList.add(newClient);
+                    }
+                    
                 }                               
             }
                            
@@ -117,5 +120,11 @@ public with sharing class ucl_ConexionData {
         System.debug('**** Update list ******');
         System.debug(updateAdvisorList);
 
+    }
+
+    public static void insertClientObjects(List<Client__c> clientList){
+        //SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c  FROM Client__c
+        List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c  FROM Client__c WITH SECURITY_ENFORCED];
+        
     }
 }
