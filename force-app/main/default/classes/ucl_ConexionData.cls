@@ -77,12 +77,15 @@ public with sharing class ucl_ConexionData {
                     newClient.Address__c = adress;
                     newClient.Client_Number__c = clientNumber;
                     newClient.Legal_Advisor__c = legalAdvisorId;
-                    if(newLegalAdvisorList[i].legalAdvisor.Account_Status__c == 'Enabled'){
+                    newClient.Created_From__c = 'JSON';
+                    if(newLegalAdvisorList[i].Account_Status__c == 'Enabled'){
                         newClientsList.add(newClient);
                     }
                     
                 }                               
             }
+
+            insertClientObjects(newClientsList);
                            
             //insert newClientsList;
             
@@ -115,16 +118,30 @@ public with sharing class ucl_ConexionData {
         }
         //insert insertAdvisorList;
         //update updateAdvisorList;
-        System.System.debug('**** Insert list*******');
-        System.debug(insertAdvisorList);
-        System.debug('**** Update list ******');
-        System.debug(updateAdvisorList);
 
     }
 
     public static void insertClientObjects(List<Client__c> clientList){
         //SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c  FROM Client__c
-        List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c  FROM Client__c WITH SECURITY_ENFORCED];
+        List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c,  Created_From__c FROM Client__c WITH SECURITY_ENFORCED];
+        List<Client__c> toDeleteClientList = new List<Client__c>();
+        for(Client__c client:clientList){
+            String idClient = client.Legal_Advisor__r.Account_Number__c + client.Client_Number__c;
+            for(Client__c oldClient:oldClientList){
+                String oldIdClient = oldClient.Legal_Advisor__r.Account_Number__c + oldClient.Client_Number__c;
+                System.debug('Old Client '+oldClient);
+                
+                if(idClient!=oldIdClient && oldClient.Created_From__c!=null){
+                    toDeleteClientList.add(oldClient);
+                }
+                
+            }
+        }
+        System.debug(clientList);
         
+
     }
+    
 }
+
+//ucl_ConexionData.dataToObject();
