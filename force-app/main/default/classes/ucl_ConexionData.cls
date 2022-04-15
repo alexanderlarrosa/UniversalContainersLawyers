@@ -1,4 +1,5 @@
 public with sharing class ucl_ConexionData {
+    
 
     //Create conexion
     //Get JSON data
@@ -17,13 +18,17 @@ public with sharing class ucl_ConexionData {
         return response;
     }
 
+    
     //Convert response to Object
+    @AuraEnabled(cacheable=true)
     public static void dataToObject(){
+        
+        boolean conexionStatus = false;
         HttpResponse response = getConexionData();
 
         //Verification of response status
         if(response.getStatusCode() == 200) {
-
+            conexionStatus=true;
             //Variables
             List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
             List<Legal_Advisor__c> disabledAdvisorList = new List<Legal_Advisor__c>();
@@ -92,6 +97,8 @@ public with sharing class ucl_ConexionData {
 
 
         }
+
+        
     }
 
     
@@ -101,22 +108,36 @@ public with sharing class ucl_ConexionData {
         List<Legal_Advisor__c> insertAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c FROM Legal_Advisor__c WITH SECURITY_ENFORCED];
-        System.debug('Tamaño old advisor list SQL '+oldAdvisorList.size());
         for(Legal_Advisor__c advisor:advisorList){
-            System.debug('Entro en el for advisorList');
             for(Legal_Advisor__c oldAdvisor:oldAdvisorList){
-                System.debug('Entreo en el for oldAdvisorList');
                 if(advisor.Account_Number__c == oldAdvisor.Account_Number__c){
                     updateAdvisorList.add(advisor);
                 } else if(advisor.Account_Status__c=='Enabled'){
-                    insertAdvisorList.add(advisor);
-                }
-                
-                
+                    if(insertAdvisorList.contains(advisor)==false){
+                        System.debug('Agrego Advisor '+advisor.Name);
+                        insertAdvisorList.add(advisor);
+                    }
+                    
+                }              
             }
-        
         }
-        //insert insertAdvisorList;
+        System.debug('****************');
+        System.debug(insertAdvisorList);
+        /*
+        SObject.sObjectType.getDescribe().isAccesible();
+        SObject.sObjectType.getDescribe().isCreateable();
+        SObject.sObjectType.getDescribe().isUpdateable();
+        SObject.sObjectType.getDescribe().isDeleteable();
+        */
+
+        
+
+        if (Legal_Advisor__c.SObjectType.getDescribe().isCreateable() == true) {
+            insert insertAdvisorList;
+        }
+        
+        //SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, insertAdvisorList);
+       
         //update updateAdvisorList;
 
     }
@@ -137,7 +158,9 @@ public with sharing class ucl_ConexionData {
                 
             }
         }
-        System.debug(clientList);
+        
+        //SObject.sObjectType.getDescribe().isCreateable();
+        
         
 
     }
