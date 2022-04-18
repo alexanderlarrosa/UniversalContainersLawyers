@@ -21,47 +21,78 @@ public with sharing class ucl_ConexionData {
     
     //Convert response to Object
     @AuraEnabled(cacheable=true)
-    public static void dataToObject(){
-        
+    public static boolea dataToObject(){        
         boolean conexionStatus = false;
         HttpResponse response = getConexionData();
 
         //Verification of response status
         if(response.getStatusCode() == 200) {
             conexionStatus=true;
+
             //Variables
-            List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
+           
             List<Legal_Advisor__c> disabledAdvisorList = new List<Legal_Advisor__c>();
             List<Client__c> newClientsList = new List<Client__c>();
+            List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
 
             //Creation List of Legal Advisor
-            List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());           
+            List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());      
+            System.debug('****** Lista legal advior list despues de deserializar');
+            System.debug(legalAdvisorList);
             
             //Iteration through List and Maps
             //Get data from Maps to set Custom Objet "Legal_Advisor__c"
-            for(Object advisor:legalAdvisorList){
-                Map<String,Object> legalAdvisorData = (Map<String,Object>) advisor;   
-                Legal_Advisor__c legalAdvisor = new Legal_Advisor__c();
-                String accountNumber = (String) legalAdvisorData.get('AccountNumber');
-                String name = (String) legalAdvisorData.get('AccountName');
-                String accountStatus = (String) legalAdvisorData.get('AccountStatus');
-                String auxDate =  (String) legalAdvisorData.get('AsOfDate');           
-                Date asOfDate = date.parse((String) legalAdvisorData.get('AsOfDate'));
-                legalAdvisor.Account_Number__c = accountNumber;
-                legalAdvisor.Name = name;
-                legalAdvisor.Account_Status__c = accountStatus;
-                legalAdvisor.As_of_Date__c = asOfDate;
-                List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
-                newLegalAdvisorList.add(legalAdvisor);
-                                                          
-            }
+
+            newLegalAdvisorList = createLegalAdvisorObject(legalAdvisorList);
+            System.debug('Lista new Legal Advisor list despues de createLegalAdvisorObject ');
+            SYstem.debug(newLegalAdvisorList);
+            newClientsList = createClientObject(legalAdvisorList, newLegalAdvisorList);
             
-            //insert newLegalAdvisorList;
-            System.debug('Tamaño de la lista antes de llamar al metodo '+newLegalAdvisorList.size());
-            insertAdvisorObjects(newLegalAdvisorList);
+
+           
             
             //Iteration through List and Maps
             //Get data from Maps to set Custom Object "Clients"
+            
+            
+
+
+        }
+        return conexionStatus;
+        
+    }
+
+
+
+    //Get data from Maps to set Custom Objet "Legal_Advisor__c"
+
+    public static List<Legal_Advisor__c> createLegalAdvisorObject(List<Object> legalAdvisorList){
+        List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
+        for(Object advisor:legalAdvisorList){
+            Map<String,Object> legalAdvisorData = (Map<String,Object>) advisor;   
+            Legal_Advisor__c legalAdvisor = new Legal_Advisor__c();
+            String accountNumber = (String) legalAdvisorData.get('AccountNumber');
+            String name = (String) legalAdvisorData.get('AccountName');
+            String accountStatus = (String) legalAdvisorData.get('AccountStatus');
+            String auxDate =  (String) legalAdvisorData.get('AsOfDate');           
+            Date asOfDate = date.parse((String) legalAdvisorData.get('AsOfDate'));
+            legalAdvisor.Account_Number__c = accountNumber;
+            legalAdvisor.Name = name;
+            legalAdvisor.Account_Status__c = accountStatus;
+            legalAdvisor.As_of_Date__c = asOfDate;
+            List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
+            newLegalAdvisorList.add(legalAdvisor);
+                                                      
+        } 
+        insertAdvisorObjects(newLegalAdvisorList);
+        return newLegalAdvisorList;
+
+    }
+
+    //Get data from Maps to set Custom Object "Clients"
+
+    public static List<Client__c> createClientObject(List<Object> legalAdvisorList, List<Legal_Advisor__c> newLegalAdvisorList){
+        List<Client__c> newClientsList = new List<Client__c>();
             for(integer i=0; i<newLegalAdvisorList.size();i++){
                 Map<String,Object> legalAdvisorData = (Map<String,Object>) legalAdvisorList[i];   
                 List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
@@ -93,18 +124,16 @@ public with sharing class ucl_ConexionData {
             insertClientObjects(newClientsList);
                            
             //insert newClientsList;
-            
+            return newClientsList;
 
-
-        }
-
-        
     }
 
     
 
     //Insert or update objects
     public static void insertAdvisorObjects(List<Legal_Advisor__c> advisorList){
+        System.debug('Entro en insert advisor object');
+        System.debug(advisorList);
         List<Legal_Advisor__c> insertAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c FROM Legal_Advisor__c WITH SECURITY_ENFORCED];
@@ -119,6 +148,9 @@ public with sharing class ucl_ConexionData {
                     }
                     
                 }              
+            }
+            if(insertAdvisorList.contains(advisor)==false && advisor.Account_Status__c=='Enabled'){
+                insertAdvisorList.add(advisor);
             }
         }
         System.debug('****************');
