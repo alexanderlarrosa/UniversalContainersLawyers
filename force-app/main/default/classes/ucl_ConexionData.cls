@@ -20,11 +20,11 @@ public with sharing class ucl_ConexionData {
 
     
     //Convert response to Object
-    @AuraEnabled(cacheable=true)
-    public static boolea dataToObject(){        
+    @AuraEnabled
+    public static boolean dataToObject(){        
         boolean conexionStatus = false;
         HttpResponse response = getConexionData();
-
+        System.debug('Response status '+response.getStatusCode());
         //Verification of response status
         if(response.getStatusCode() == 200) {
             conexionStatus=true;
@@ -40,22 +40,10 @@ public with sharing class ucl_ConexionData {
             System.debug('****** Lista legal advior list despues de deserializar');
             System.debug(legalAdvisorList);
             
-            //Iteration through List and Maps
-            //Get data from Maps to set Custom Objet "Legal_Advisor__c"
-
             newLegalAdvisorList = createLegalAdvisorObject(legalAdvisorList);
             System.debug('Lista new Legal Advisor list despues de createLegalAdvisorObject ');
             SYstem.debug(newLegalAdvisorList);
             newClientsList = createClientObject(legalAdvisorList, newLegalAdvisorList);
-            
-
-           
-            
-            //Iteration through List and Maps
-            //Get data from Maps to set Custom Object "Clients"
-            
-            
-
 
         }
         return conexionStatus;
@@ -154,23 +142,11 @@ public with sharing class ucl_ConexionData {
             }
         }
         System.debug('****************');
-        System.debug(insertAdvisorList);
-        /*
-        SObject.sObjectType.getDescribe().isAccesible();
-        SObject.sObjectType.getDescribe().isCreateable();
-        SObject.sObjectType.getDescribe().isUpdateable();
-        SObject.sObjectType.getDescribe().isDeleteable();
-        */
-
+        System.debug(insertAdvisorList); 
         
-
         if (Legal_Advisor__c.SObjectType.getDescribe().isCreateable() == true) {
-            insert insertAdvisorList;
+            insert insertAdvisorList;      
         }
-        
-        //SObjectAccessDecision decision = Security.stripInaccessible(AccessType.CREATABLE, insertAdvisorList);
-       
-        //update updateAdvisorList;
 
     }
 
@@ -190,7 +166,9 @@ public with sharing class ucl_ConexionData {
                 
             }
         }
-        
+        if (Client__c.SObjectType.getDescribe().isCreateable() == true) {
+            insert clientList;      
+        }
         //SObject.sObjectType.getDescribe().isCreateable();
         
         
