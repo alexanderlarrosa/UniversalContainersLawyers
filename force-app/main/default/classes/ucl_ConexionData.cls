@@ -21,12 +21,14 @@ public with sharing class ucl_ConexionData {
     
     //Convert response to Object
     @AuraEnabled
-    public static boolean dataToObject(){        
+    public static boolean dataToObject(){   
+        System.debug('Llmo a http');     
         boolean conexionStatus = false;
         HttpResponse response = getConexionData();
-        System.debug('Response status '+response.getStatusCode());
+        System.debug('Response es '+response.getStatusCode());
         //Verification of response status
         if(response.getStatusCode() == 200) {
+            System.debug('Entro en el if de response');
             conexionStatus=true;
 
             //Variables
@@ -37,12 +39,10 @@ public with sharing class ucl_ConexionData {
 
             //Creation List of Legal Advisor
             List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());      
-            System.debug('****** Lista legal advior list despues de deserializar');
-            System.debug(legalAdvisorList);
+
             
             newLegalAdvisorList = createLegalAdvisorObject(legalAdvisorList);
-            System.debug('Lista new Legal Advisor list despues de createLegalAdvisorObject ');
-            SYstem.debug(newLegalAdvisorList);
+
             newClientsList = createClientObject(legalAdvisorList, newLegalAdvisorList);
 
         }
@@ -55,6 +55,7 @@ public with sharing class ucl_ConexionData {
     //Get data from Maps to set Custom Objet "Legal_Advisor__c"
 
     public static List<Legal_Advisor__c> createLegalAdvisorObject(List<Object> legalAdvisorList){
+        System.debug('Entro en createLegalAdivsorObject');
         List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
         for(Object advisor:legalAdvisorList){
             Map<String,Object> legalAdvisorData = (Map<String,Object>) advisor;   
@@ -109,10 +110,10 @@ public with sharing class ucl_ConexionData {
                 }                               
             }
 
-            insertClientObjects(newClientsList);
+            //insertClientObjects(newClientsList);
                            
             //insert newClientsList;
-            return newClientsList;
+            return newClientsList; 
 
     }
 
@@ -120,34 +121,22 @@ public with sharing class ucl_ConexionData {
 
     //Insert or update objects
     public static void insertAdvisorObjects(List<Legal_Advisor__c> advisorList){
-        System.debug('Entro en insert advisor object');
-        System.debug(advisorList);
-        List<Legal_Advisor__c> insertAdvisorList = new List<Legal_Advisor__c>();
+        System.debug('Entro en insertAdvisorObject');
+        List<Legal_Advisor__c> newAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c FROM Legal_Advisor__c WITH SECURITY_ENFORCED];
         for(Legal_Advisor__c advisor:advisorList){
             for(Legal_Advisor__c oldAdvisor:oldAdvisorList){
                 if(advisor.Account_Number__c == oldAdvisor.Account_Number__c){
-                    updateAdvisorList.add(advisor);
-                } else if(advisor.Account_Status__c=='Enabled'){
-                    if(insertAdvisorList.contains(advisor)==false){
-                        System.debug('Agrego Advisor '+advisor.Name);
-                        insertAdvisorList.add(advisor);
-                    }
-                    
+                    advisor.Id = oldAdvisor.Id; 
+                    newAdvisorList.add(advisor);
                 }              
             }
-            if(insertAdvisorList.contains(advisor)==false && advisor.Account_Status__c=='Enabled'){
-                insertAdvisorList.add(advisor);
+            if(newAdvisorList.contains(advisor)==false && advisor.Account_Status__c=='Enabled'){
+                newAdvisorList.add(advisor);
             }
         }
-        System.debug('****************');
-        System.debug(insertAdvisorList); 
-        
-        if (Legal_Advisor__c.SObjectType.getDescribe().isCreateable() == true) {
-            insert insertAdvisorList;      
-        }
-
+        upsert newAdvisorList;
     }
 
     public static void insertClientObjects(List<Client__c> clientList){
@@ -158,7 +147,6 @@ public with sharing class ucl_ConexionData {
             String idClient = client.Legal_Advisor__r.Account_Number__c + client.Client_Number__c;
             for(Client__c oldClient:oldClientList){
                 String oldIdClient = oldClient.Legal_Advisor__r.Account_Number__c + oldClient.Client_Number__c;
-                System.debug('Old Client '+oldClient);
                 
                 if(idClient!=oldIdClient && oldClient.Created_From__c!=null){
                     toDeleteClientList.add(oldClient);
@@ -166,13 +154,8 @@ public with sharing class ucl_ConexionData {
                 
             }
         }
-        if (Client__c.SObjectType.getDescribe().isCreateable() == true) {
-            insert clientList;      
-        }
-        //SObject.sObjectType.getDescribe().isCreateable();
+        delete toDeleteClientList;
         
-        
-
     }
     
 }
