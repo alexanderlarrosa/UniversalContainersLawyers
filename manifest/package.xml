@@ -16,5 +16,10 @@
         <members>Universal_Containers_Lawyers</members>
         <name>CustomApplication</name>
     </types>
+    <types>
+        <members>*</members>
+        <name>LightningComponentBundle</name>
+    </types>
+    
     <version>53.0</version>
 </Package>
