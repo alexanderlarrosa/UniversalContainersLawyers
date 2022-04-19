@@ -110,7 +110,7 @@ public with sharing class ucl_ConexionData {
                 }                               
             }
 
-            //insertClientObjects(newClientsList);
+            insertClientObjects(newClientsList);
                            
             //insert newClientsList;
             return newClientsList; 
@@ -155,6 +155,7 @@ public with sharing class ucl_ConexionData {
             }
         }
         delete toDeleteClientList;
+        insert clientList;
         
     }
     
