@@ -30,6 +30,7 @@ public with sharing class ucl_ConexionData {
         boolean status = dataToObject();
     }
     
+    
     //Convert response to Object
     @AuraEnabled
     public static boolean dataToObject(){  
