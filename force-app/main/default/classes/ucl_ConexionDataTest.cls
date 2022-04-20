@@ -40,6 +40,23 @@ private class ucl_ConexionDataTest {
         
     }
     
+    @isTest static void testLogErrors(){
+         // Create the mock response based on a static resource
+        List<Error__c> errorList = [SELECT Name FROM Error__c];
+        System.debug('Tamaño error list '+errorList.size());
+        StaticResourceCalloutMock mock = new StaticResourceCalloutMock();
+        mock.setStaticResource('');
+        mock.setStatusCode(200);
+        mock.setHeader('Content-Type', 'application/json;charset=UTF-8');
+        // Associate the callout with a mock response
+        Test.setMock(HttpCalloutMock.class, mock);
+        // Call method to test
+        HttpResponse result = ucl_ConexionData.getConexionData();
+        List<Error__c> newErrorList = [SELECT Name FROM Error__c];
+        System.debug('New error list '+newErrorList.size());
+        System.assert(newErrorList.size()>errorList.size());
+    }
+    
     
     
    
