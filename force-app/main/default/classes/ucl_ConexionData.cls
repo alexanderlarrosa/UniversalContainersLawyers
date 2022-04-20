@@ -19,7 +19,7 @@ public with sharing class ucl_ConexionData {
             response = http.send(request);       
             
         }catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
         return response;
        
@@ -56,7 +56,7 @@ public with sharing class ucl_ConexionData {
 
             }
         } catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
         
         return conexionStatus;
@@ -66,7 +66,6 @@ public with sharing class ucl_ConexionData {
 
 
     //Get data from Maps to set Custom Objet "Legal_Advisor__c"
-
     public static List<Legal_Advisor__c> createLegalAdvisorObject(List<Object> legalAdvisorList){
         List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
         try{
@@ -88,7 +87,7 @@ public with sharing class ucl_ConexionData {
             } 
             insertAdvisorObjects(newLegalAdvisorList);
         }catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
         
         return newLegalAdvisorList;
@@ -96,7 +95,6 @@ public with sharing class ucl_ConexionData {
     }
 
     //Get data from Maps to set Custom Object "Clients"
-
     public static List<Client__c> createClientObject(List<Object> legalAdvisorList, List<Legal_Advisor__c> newLegalAdvisorList){
         List<Client__c> newClientsList = new List<Client__c>();
         try{
@@ -130,7 +128,7 @@ public with sharing class ucl_ConexionData {
 
             insertClientObjects(newClientsList);
         }catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
             
                            
@@ -141,7 +139,7 @@ public with sharing class ucl_ConexionData {
 
     
 
-    //Insert or update objects
+    //Insert or update Legal Advisor Objects
     public static void insertAdvisorObjects(List<Legal_Advisor__c> advisorList){
         List<Legal_Advisor__c> newAdvisorList = new List<Legal_Advisor__c>();
         List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
@@ -160,13 +158,14 @@ public with sharing class ucl_ConexionData {
             }
             upsert newAdvisorList;
         }catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
         
     }
 
+
+    //Insert Client Objects
     public static void insertClientObjects(List<Client__c> clientList){
-        //SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c  FROM Client__c
         List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c,  Created_From__c FROM Client__c WITH SECURITY_ENFORCED];
         List<Client__c> toDeleteClientList = new List<Client__c>();
         try{
@@ -184,19 +183,37 @@ public with sharing class ucl_ConexionData {
             delete toDeleteClientList;
             insert clientList;
         }catch(Exception e){
-            logErrors(e.getMessage());
+            logErrors(e);
         }
         
         
     }
 
-    public static void logErrors(String message){
+    //Regist errors on Error objects
+    public static void logErrors(Exception e){
         Error__c errorLog = new Error__c();
-        errorLog.Message__c = message;
-        System.debug(errorLog);
+        errorLog.Date__c = Date.today();
+        errorLog.Name = (e.getTypeName());
+        errorLog.Message__c = (e.getMessage());
+        sendEmail(e);
         Insert errorLog;
+    }
+
+    //Sending email
+    public static void sendEmail(Exception e){
+        //Get Administrator Email
+        Profile sys_adm_profile = [SELECT Id FROM Profile WHERE Name = 'System Administrator' WITH SECURITY_ENFORCED];
+        Id adminId = sys_adm_profile.Id;
+        List<User> sys_admin = [SELECT Id, Email FROM User WHERE ProfileId =: adminId WITH SECURITY_ENFORCED];
+        String adminEmail = sys_admin[0].Email;
+
+        string[] mailAdress = new string[] {adminEmail};
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
+        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+        mail.setToAddresses(mailAdress);
+        mail.setSubject('Error Log');
+        mail.setHtmlBody('Error Type: '+e.getTypeName()+' - '+e.getMessage());
+        Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
     }
     
 }
-
-//ucl_ConexionData.dataToObject();
