@@ -1,219 +1,122 @@
-
 public with sharing class ucl_ConexionData {
-    
-
-    //Create conexion
-    //Get JSON data
     public static HttpResponse getConexionData() {
-        
-        //Variables
-        String url = 'https://altimetrik-bootcamp.herokuapp.com/LegalAccounts';
         Http http = new Http();
         HttpRequest request = new HttpRequest();
-        HttpResponse response = new HttpResponse();
-
-        //Get conexion
-        try{
-            request.setEndpoint(url);
-            request.setMethod('GET');
-            response = http.send(request);       
-            
-        }catch(Exception e){
-            logErrors(e);
-        }
-        return response;
-       
-    }
-
-    @future(callout=true)
-    public static void call(){
-        boolean status = dataToObject();
-    }
-    
-    //Convert response to Object
-    @AuraEnabled
-    public static boolean dataToObject(){  
-        boolean conexionStatus = false;
-        try{       
-            HttpResponse response = getConexionData();
-            System.debug('Response es '+response.getStatusCode());
-            //Verification of response status
-
-            if(response.getStatusCode() == 200) {
-                System.debug('Entro en el if de response');
-                conexionStatus=true;
-
-                //Variables
-            
-                List<Legal_Advisor__c> disabledAdvisorList = new List<Legal_Advisor__c>();
-                List<Client__c> newClientsList = new List<Client__c>();
-                List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
-
-                //Creation List of Legal Advisor
-                List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());                     
-                newLegalAdvisorList = createLegalAdvisorObject(legalAdvisorList);
-                newClientsList = createClientObject(legalAdvisorList, newLegalAdvisorList);
-
+        request.setEndpoint('https://altimetrik-bootcamp.herokuapp.com/LegalAccounts');
+        request.setMethod('GET');
+        HttpResponse response = http.send(request);
+        if(response.getStatusCode() == 200) {
+            //List<Legal_Advisor__c> listLegalAdvisor = (List<Legal_Advisor__c>)JSON.deserialize(response.getBody(),List<Legal_Advisor__c>.class);
+            // Deserialize the JSON string into collections of primitive data types.
+            //List<Object> results = (List<Object>) JSON.deserializeUntyped(response.getBody());
+            //
+            /*
+            try{
+                List<Legal_Advisor__c> listLegalAdvisor = (List<Legal_Advisor__c>)JSON.deserialize(response.getBody(),List<Legal_Advisor__c>.class);
+            }catch(Exception e){
+                System.debug('Error '+e.getCause());
+                System.debug('Error '+e.getMessage());
             }
-        } catch(Exception e){
-            logErrors(e);
-        }
-        
-        return conexionStatus;
-        
-    }
 
-
-
-    //Get data from Maps to set Custom Objet "Legal_Advisor__c"
-    public static List<Legal_Advisor__c> createLegalAdvisorObject(List<Object> legalAdvisorList){
-        List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
-        try{
+            */
+            /*
+            for(Object obj:results){
+                Legal_Advisor__c legalAdvisor = New Legal_Advisor__c();
+                Decimal n = (Decimal)JSON.deserialize('100.1', Decimal.class);
+                //legalAdvisor = (Legal_Advisor__c)JSON.deserialize(obj, Legal_Advisor__c.class);
+                //legalAdvisor = obj;
+                System.debug('OBJ '+obj.get('AccountName');
+            }
+			*/
+            
+            
+            //List<Legal_Advisor__c> listLegalAdvisor = (List<Legal_Advisor__c>)JSON.deserialize(response.getBody(),List<Legal_Advisor__c>.class);
+			
+            List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());
+            /*
+			Map<String,Object> aux = (Map<String,Object>) legalAdvisorList[0];  
+            System.debug();
+            List<Object> clientList = (List<Object>) aux.get('Clients');
+			*/
+             
+            List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
+            List<Client__c> newClientsList = new List<Client__c>();
+            /*
             for(Object advisor:legalAdvisorList){
                 Map<String,Object> legalAdvisorData = (Map<String,Object>) advisor;   
                 Legal_Advisor__c legalAdvisor = new Legal_Advisor__c();
-                String accountNumber = (String) legalAdvisorData.get('AccountNumber');
-                String name = (String) legalAdvisorData.get('AccountName');
-                String accountStatus = (String) legalAdvisorData.get('AccountStatus');
-                String auxDate =  (String) legalAdvisorData.get('AsOfDate');           
-                Date asOfDate = date.parse((String) legalAdvisorData.get('AsOfDate'));
-                legalAdvisor.Account_Number__c = accountNumber;
-                legalAdvisor.Name = name;
-                legalAdvisor.Account_Status__c = accountStatus;
-                legalAdvisor.As_of_Date__c = asOfDate;
+                //System.debug(legalAdvisorData.get('AccountNumber'));
+                legalAdvisor.Account_Number__c = (String) legalAdvisorData.get('AccountNumber');
+                legalAdvisor.Name = (String) legalAdvisorData.get('AccountName');
+                legalAdvisor.Account_Status__c = (String) legalAdvisorData.get('AccountStatus');
+                legalAdvisor.As_of_Date__c = date.today();
                 List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
                 newLegalAdvisorList.add(legalAdvisor);
-                                                          
-            } 
-            insertAdvisorObjects(newLegalAdvisorList);
-        }catch(Exception e){
-            logErrors(e);
-        }
-        
-        return newLegalAdvisorList;
-
-    }
-
-    //Get data from Maps to set Custom Object "Clients"
-    public static List<Client__c> createClientObject(List<Object> legalAdvisorList, List<Legal_Advisor__c> newLegalAdvisorList){
-        List<Client__c> newClientsList = new List<Client__c>();
-        try{
-            for(integer i=0; i<newLegalAdvisorList.size();i++){
+                for(Object client:clientList){
+                    Map<String,Object> clientData = (Map<String,Object>) client;
+                    Client__c newClient = new Client__c();
+                    newClient.Name = (String) clientData.get('FirstName');
+                    newClient.Last_Name__c = (String) clientData.get('LastName');
+                    newClient.Email__c = (String) clientData.get('Email');
+                    newClient.Phone__c = (String) clientData.get('Phone');
+                    newClient.Address__c = (String) clientData.get('Address');
+                    newClient.Client_Number__c = (String) clientData.get('ClientNumber');
+                    newClient.Legal_Advisor__c = legalAdvisor.Id;
+                    newClientsList.add(newClient);
+                }                               
+            }
+            */
+            Integer cont =1;
+            for(Object advisor:legalAdvisorList){
+                
+                System.debug('Tamaño lista '+legalAdvisorList.size());
+                System.debug('Entro en el for '+cont);
+                cont++;
+                Map<String,Object> legalAdvisorData = (Map<String,Object>) advisor;   
+                Legal_Advisor__c legalAdvisor = new Legal_Advisor__c();
+                //System.debug(legalAdvisorData.get('AccountNumber'));
+                legalAdvisor.Account_Number__c = (String) legalAdvisorData.get('AccountNumber');
+                legalAdvisor.Name = (String) legalAdvisorData.get('AccountName');
+                legalAdvisor.Account_Status__c = (String) legalAdvisorData.get('AccountStatus');
+                //String fecha = '6/12/2019';
+                String auxDate =  (String) legalAdvisorData.get('AsOfDate');           
+                List<String> asOfDate = auxDate.split('/');
+                System.debug('Fecha proporcionada: '+auxdate);
+                //System.debug(asOfDate[2]+'/'+asOfDate[0]+'/'+asOfDate[1]);
+                Date d = date.parse((String) legalAdvisorData.get('AsOfDate'));
+                System.debug(d);
+                System.debug('TOday '+date.today());
+                legalAdvisor.As_of_Date__c = d;
+                //legalAdvisor.As_of_Date__c = date.parse(asOfDate[2]+'/'+asOfDate[0]+'/'+asOfDate[1]);                
+                //(String) legalAdvisorData.get('AsOfDate') date.parse(asOfDate);
+                List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
+                newLegalAdvisorList.add(legalAdvisor);                                            
+            }
+            
+            insert newLegalAdvisorList;
+            
+            for(integer i=0; i<legalAdvisorList.size();i++){
                 Map<String,Object> legalAdvisorData = (Map<String,Object>) legalAdvisorList[i];   
                 List<Object> clientList = (List<Object>) legalAdvisorData.get('Clients');
                 for(Object client:clientList){
                     Map<String,Object> clientData = (Map<String,Object>) client;
                     Client__c newClient = new Client__c();
-                    String name = (String) clientData.get('FirstName');
-                    String lastName = (String) clientData.get('LastName');
-                    String email = (String) clientData.get('Email');
-                    String phone = (String) clientData.get('Phone');
-                    String adress = (String) clientData.get('Address');
-                    String clientNumber = (String) clientData.get('ClientNumber');
-                    Id legalAdvisorId = newLegalAdvisorList[i].Id;
-                    newClient.Name = name;
-                    newClient.Last_Name__c = lastName;
-                    newClient.Email__c = email;
-                    newClient.Phone__c = phone;
-                    newClient.Address__c = adress;
-                    newClient.Client_Number__c = clientNumber;
-                    newClient.Legal_Advisor__c = legalAdvisorId;
-                    newClient.Created_From__c = 'JSON';
-                    if(newLegalAdvisorList[i].Account_Status__c == 'Enabled'){
-                        newClientsList.add(newClient);
-                    }
-                    
+                    newClient.Name = (String) clientData.get('FirstName');
+                    newClient.Last_Name__c = (String) clientData.get('LastName');
+                    newClient.Email__c = (String) clientData.get('Email');
+                    newClient.Phone__c = (String) clientData.get('Phone');
+                    newClient.Address__c = (String) clientData.get('Address');
+                    newClient.Client_Number__c = (String) clientData.get('ClientNumber');
+                    newClient.Legal_Advisor__c = newLegalAdvisorList[i].Id;
+                    newClientsList.add(newClient);
                 }                               
             }
-
-            insertClientObjects(newClientsList);
-        }catch(Exception e){
-            logErrors(e);
-        }
+           
             
-                           
-        //insert newClientsList;
-        return newClientsList; 
-
-    }
-
-    
-
-    //Insert or update Legal Advisor Objects
-    public static void insertAdvisorObjects(List<Legal_Advisor__c> advisorList){
-        List<Legal_Advisor__c> newAdvisorList = new List<Legal_Advisor__c>();
-        List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
-        List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c FROM Legal_Advisor__c WITH SECURITY_ENFORCED];
-        try{
-            for(Legal_Advisor__c advisor:advisorList){
-                for(Legal_Advisor__c oldAdvisor:oldAdvisorList){
-                    if(advisor.Account_Number__c == oldAdvisor.Account_Number__c){
-                        advisor.Id = oldAdvisor.Id; 
-                        newAdvisorList.add(advisor);
-                    }              
-                }
-                if(newAdvisorList.contains(advisor)==false && advisor.Account_Status__c=='Enabled'){
-                    newAdvisorList.add(advisor);
-                }
-            }
-            upsert newAdvisorList;
-        }catch(Exception e){
-            logErrors(e);
+            
+        	insert newClientsList;
         }
         
+        return response;
     }
-
-
-    //Insert Client Objects
-    public static void insertClientObjects(List<Client__c> clientList){
-        List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c,  Created_From__c FROM Client__c WITH SECURITY_ENFORCED];
-        List<Client__c> toDeleteClientList = new List<Client__c>();
-        try{
-            for(Client__c client:clientList){
-                String idClient = client.Legal_Advisor__r.Account_Number__c + client.Client_Number__c;
-                for(Client__c oldClient:oldClientList){
-                    String oldIdClient = oldClient.Legal_Advisor__r.Account_Number__c + oldClient.Client_Number__c;
-                    
-                    if(idClient!=oldIdClient && oldClient.Created_From__c!=null){
-                        toDeleteClientList.add(oldClient);
-                    }
-                    
-                }
-            }
-            delete toDeleteClientList;
-            insert clientList;
-        }catch(Exception e){
-            logErrors(e);
-        }
-        
-        
-    }
-
-    //Regist errors on Error objects
-    public static void logErrors(Exception e){
-        Error__c errorLog = new Error__c();
-        errorLog.Date__c = Date.today();
-        errorLog.Name = (e.getTypeName());
-        errorLog.Message__c = (e.getMessage());
-        sendEmail(e);
-        Insert errorLog;
-    }
-
-    //Sending email
-    public static void sendEmail(Exception e){
-        //Get Administrator Email
-        Profile sys_adm_profile = [SELECT Id FROM Profile WHERE Name = 'System Administrator' WITH SECURITY_ENFORCED];
-        Id adminId = sys_adm_profile.Id;
-        List<User> sys_admin = [SELECT Id, Email FROM User WHERE ProfileId =: adminId WITH SECURITY_ENFORCED];
-        String adminEmail = sys_admin[0].Email;
-
-        string[] mailAdress = new string[] {adminEmail};
-        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
-        Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
-        mail.setToAddresses(mailAdress);
-        mail.setSubject('Error Log');
-        mail.setHtmlBody('Error Type: '+e.getTypeName()+' - '+e.getMessage());
-        Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
-    }
-    
 }
