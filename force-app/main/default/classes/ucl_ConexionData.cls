@@ -47,13 +47,13 @@ public with sharing class ucl_ConexionData {
                 //Variables
             
                 List<Legal_Advisor__c> disabledAdvisorList = new List<Legal_Advisor__c>();
-                List<Client__c> newClientsList = new List<Client__c>();
+
                 List<Legal_Advisor__c> newLegalAdvisorList = new List<Legal_Advisor__c>();
 
                 //Creation List of Legal Advisor
                 List<Object> legalAdvisorList = (List<Object>) JSON.deserializeUntyped(response.getBody());                     
                 newLegalAdvisorList = createLegalAdvisorObject(legalAdvisorList);
-                newClientsList = createClientObject(legalAdvisorList, newLegalAdvisorList);
+                createClientObject(legalAdvisorList, newLegalAdvisorList);
 
             }
         } catch(Exception e){
@@ -96,7 +96,7 @@ public with sharing class ucl_ConexionData {
     }
 
     //Get data from Maps to set Custom Object "Clients"
-    public static List<Client__c> createClientObject(List<Object> legalAdvisorList, List<Legal_Advisor__c> newLegalAdvisorList){
+    public static void createClientObject(List<Object> legalAdvisorList, List<Legal_Advisor__c> newLegalAdvisorList){
         List<Client__c> newClientsList = new List<Client__c>();
         try{
             for(integer i=0; i<newLegalAdvisorList.size();i++){
@@ -131,62 +131,77 @@ public with sharing class ucl_ConexionData {
         }catch(Exception e){
             logErrors(e);
         }
-            
-                           
-        //insert newClientsList;
-        return newClientsList; 
-
     }
 
     
 
     //Insert or update Legal Advisor Objects
     public static void insertAdvisorObjects(List<Legal_Advisor__c> advisorList){
-        List<Legal_Advisor__c> newAdvisorList = new List<Legal_Advisor__c>();
-        List<Legal_Advisor__c> updateAdvisorList = new List<Legal_Advisor__c>();
-        List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c FROM Legal_Advisor__c WITH SECURITY_ENFORCED];
         try{
-            for(Legal_Advisor__c advisor:advisorList){
-                for(Legal_Advisor__c oldAdvisor:oldAdvisorList){
-                    if(advisor.Account_Number__c == oldAdvisor.Account_Number__c){
-                        advisor.Id = oldAdvisor.Id; 
-                        newAdvisorList.add(advisor);
-                    }              
-                }
-                if(newAdvisorList.contains(advisor)==false && advisor.Account_Status__c=='Enabled'){
-                    newAdvisorList.add(advisor);
-                }
-            }
-            upsert newAdvisorList;
+            List<Legal_Advisor__c> newAdvisorList = new List<Legal_Advisor__c>();
+        Set<String> accountNumbersLA = new Set<String>();
+        for(Legal_Advisor__c advisor : advisorList){           
+            String accountNumber = advisor.Account_Number__c;
+            accountNumbersLA.add(accountNumber);
+        }
+        List<Legal_Advisor__c> oldAdvisorList = [SELECT Account_Number__c, (SELECT Name FROM Clients__r ) FROM Legal_Advisor__c WHERE Account_Number__c IN: accountNumbersLA WITH SECURITY_ENFORCED];      
+        Map<String, Legal_Advisor__c> advisorsMap = new Map<String, Legal_Advisor__c>();
+        for (Legal_Advisor__c oldAdvisor : oldAdvisorList) {
+            advisorsMap.put(oldAdvisor.Account_Number__c, oldAdvisor);           
+        }  
+
+        for(Legal_Advisor__c advisor: advisorList){
+            if (advisorsMap.get(advisor.Account_Number__c) != null) {
+                System.debug('Entro en el if del mapa');
+                advisor.Id = advisorsMap.get(advisor.Account_Number__c).Id;
+                newAdvisorList.add(advisor);
+            }else if(advisor.Account_Status__c=='Enabled'){
+                newAdvisorList.add(advisor);
+            }                         
+        }
+
+        upsert newAdvisorList; 
         }catch(Exception e){
             logErrors(e);
         }
         
+
     }
 
 
     //Insert Client Objects
     public static void insertClientObjects(List<Client__c> clientList){
-        List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c,  Created_From__c FROM Client__c WITH SECURITY_ENFORCED];
-        List<Client__c> toDeleteClientList = new List<Client__c>();
         try{
-            for(Client__c client:clientList){
-                String idClient = client.Legal_Advisor__r.Account_Number__c + client.Client_Number__c;
-                for(Client__c oldClient:oldClientList){
-                    String oldIdClient = oldClient.Legal_Advisor__r.Account_Number__c + oldClient.Client_Number__c;
+            List<Client__c> oldClientList = [SELECT Legal_Advisor__r.Account_Number__c, Client_Number__c,  Created_From__c FROM Client__c WITH SECURITY_ENFORCED];
+            List<Client__c> clientToDelete = new List<Client__c>();
+            Map<String, Client__c> clientMap = new Map<String, Client__c>();
+            List<String> idClientList = new List<String>();
+            for(Client__c oldClient: oldClientList){
+                String clientId = oldClient.Legal_Advisor__r.Account_Number__c + oldClient.Client_Number__c;
+                clientMap.put(clientId, oldClient);
+            }
+            //
+            for(Client__c client: clientList){
+    
+                String clientId = client.Legal_Advisor__r.Account_Number__c + client.Client_Number__c;
+                //Me fijo si el cliente nuevo existe en la base de datos
+                if(clientMap.get(clientId)!=null){
+                    //Si existo le asigno el mismo id
+                    client.Id = clientMap.get(clientId).Id;
+                }
                     
-                    if(idClient!=oldIdClient && oldClient.Created_From__c!=null){
-                        toDeleteClientList.add(oldClient);
-                    }
-                    
+            }     
+            for(Client__c client: clientMap.values()){
+                if(client.Created_From__c=='JSON'){
+                    clientToDelete.add(client);
                 }
             }
-            delete toDeleteClientList;
-            insert clientList;
+            delete clientToDelete;
+            upsert clientList;  
         }catch(Exception e){
             logErrors(e);
         }
-        
+
         
     }
 
